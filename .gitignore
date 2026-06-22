@@ -1,0 +1,58 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Java bytecode and package files
+*.class
+*.jar
+*.war
+*.ear
+
+# Spring Boot generated files
+*.pid
+*.pid.lock
+*.seed
+*.out
+*.err
+
+# Build directories
+target/
+build/
+out/
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle/
+
+# IDEs and editors
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+.vscode/
+
+# Test and coverage outputs
+coverage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Environment and local config
+.env
+.env.*
+!.env.example
+*.local
+
+# Application local overrides
+application-local.yml
+application-local.yaml
+application-local.properties
