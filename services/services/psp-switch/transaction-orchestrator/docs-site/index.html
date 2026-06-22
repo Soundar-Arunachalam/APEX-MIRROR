@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>PSP Orchestrator — TDD Documentation</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="Dual-Direction UPI Transaction Orchestrator Documentation">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <!-- Theme: Dark -->
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/dark.css">
+  <style>
+    :root {
+      --theme-color: #4f8ef7;
+    }
+
+    .markdown-section {
+      max-width: 900px;
+    }
+
+    /* Fix table contrast for dark theme */
+    .markdown-section table tr {
+      background-color: transparent !important;
+    }
+
+    .markdown-section table tr:nth-child(2n) {
+      background-color: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .markdown-section table th,
+    .markdown-section table td {
+      border-color: rgba(255, 255, 255, 0.1) !important;
+      color: #dfdfdf !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">Loading TDD Documentation...</div>
+  <script>
+    window.$docsify = {
+      name: 'PSP Orchestrator Docs',
+      repo: '',
+      loadSidebar: true,
+      subMaxLevel: 2,
+      basePath: '/docs/',
+      homepage: 'intro.md',
+      themeColor: '#4f8ef7',
+      // Mermaid support configuration
+      markdown: {
+        renderer: {
+          code: function (code, lang) {
+            if (lang === "mermaid") {
+              return (
+                '<div class="mermaid">' + mermaid.render('mermaid-svg-' + Date.now(), code) + "</div>"
+              );
+            }
+            return this.origin.code.apply(this, arguments);
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Docsify v4 -->
+  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+
+  <!-- Java Code Highlighting -->
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-java.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+
+  <!-- Mermaid -->
+  <script src="//cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+  </script>
+</body>
+
+</html>

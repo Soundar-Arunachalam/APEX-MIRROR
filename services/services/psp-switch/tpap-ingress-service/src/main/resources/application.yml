@@ -1,0 +1,49 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: tpap-ingress-service
+  datasource:
+    url: ${POSTGRES_URL_INGRESS:jdbc:postgresql://localhost:5432/tpap_ingress}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      retries: 3
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+
+# ── TPAP Registry (v1 hardcoded) ──
+app:
+  tpap:
+    registry:
+      phonepe:
+        api-key: phonepe-secret-key-v1
+  kafka:
+    topics:
+      vpa-lookup: psp.vpa.lookup.request
+      balance-inquiry: psp.balance.inquiry.request
+      payment-initiate: ${KAFKA_TOPIC_PAYMENT_REQUESTS:psp.payment.initiate.request}
+      audit: psp.audit.events
+  idempotency:
+    redis-ttl-hours: 24
+  rate-limit:
+    requests-per-minute: 300

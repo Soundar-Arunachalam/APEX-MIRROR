@@ -1,0 +1,15 @@
+{
+  "name": "tpap-kafka-publisher",
+  "version": "1.0.0",
+  "description": "TPAP Egress Demo — Kafka Event Publisher UI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "kafkajs": "^2.2.4",
+    "uuid": "^9.0.1"
+  }
+}

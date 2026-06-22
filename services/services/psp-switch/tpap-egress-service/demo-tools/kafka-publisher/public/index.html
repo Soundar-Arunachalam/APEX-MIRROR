@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TPAP Egress — Kafka Event Publisher</title>
+  <meta name="description" content="Publish sample UPI events to Kafka for TPAP Egress Service demo" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div>
+          <h1>TPAP Kafka Publisher</h1>
+          <p class="subtitle">PSP Switch → Egress Event Simulator</p>
+        </div>
+      </div>
+      <div class="status-pills">
+        <div class="pill" id="kafkaStatus">
+          <span class="dot dot-disconnected"></span>
+          <span>Kafka</span>
+        </div>
+        <div class="pill" id="publishCounter">
+          <span class="counter-badge">0</span>
+          <span>Published</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- ── Event Type Selector ── -->
+    <section class="card selector-card">
+      <h2 class="card-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+          <line x1="12" y1="22" x2="12" y2="15.5"/>
+          <polyline points="22 8.5 12 15.5 2 8.5"/>
+        </svg>
+        Select Event Type
+      </h2>
+      <div class="event-tabs" id="eventTabs">
+        <button class="tab active" data-type="VPA_VERIFICATION" id="tab-vpa">
+          <div class="tab-icon tab-icon-vpa">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="tab-text">
+            <span class="tab-label">VPA Lookup</span>
+            <span class="tab-sub">VPA_VERIFICATION</span>
+          </div>
+        </button>
+        <button class="tab" data-type="BALANCE_INQUIRY" id="tab-balance">
+          <div class="tab-icon tab-icon-balance">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 10v4"/><path d="M9 12h6"/></svg>
+          </div>
+          <div class="tab-text">
+            <span class="tab-label">Balance Inquiry</span>
+            <span class="tab-sub">BALANCE_INQUIRY</span>
+          </div>
+        </button>
+        <button class="tab" data-type="PAYMENT_PUSH" id="tab-payment">
+          <div class="tab-icon tab-icon-payment">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div class="tab-text">
+            <span class="tab-label">Payment Push</span>
+            <span class="tab-sub">PAYMENT_PUSH</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- ── JSON Editor ── -->
+    <section class="card editor-card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+          </svg>
+          Event Payload
+        </h2>
+        <div class="editor-actions">
+          <button class="btn btn-ghost" id="btnRegenerate" title="Regenerate with new IDs">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Regenerate IDs
+          </button>
+          <button class="btn btn-ghost" id="btnFormat" title="Format JSON">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="3" y2="18"/></svg>
+            Format
+          </button>
+        </div>
+      </div>
+      <div class="editor-wrapper">
+        <div class="line-numbers" id="lineNumbers"></div>
+        <textarea id="jsonEditor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+      </div>
+      <div class="editor-footer">
+        <span class="json-status" id="jsonStatus">
+          <span class="dot dot-success"></span> Valid JSON
+        </span>
+        <span class="char-count" id="charCount">0 chars</span>
+      </div>
+    </section>
+
+    <!-- ── Publish Button ── -->
+    <section class="publish-section">
+      <button class="btn btn-publish" id="btnPublish">
+        <span class="btn-content" id="publishBtnContent">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Publish to Kafka
+        </span>
+        <span class="btn-spinner" id="publishSpinner" style="display:none;">
+          <div class="spinner"></div>
+          Publishing...
+        </span>
+      </button>
+    </section>
+
+    <!-- ── Toast Container ── -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ── Activity Log ── -->
+    <section class="card log-card">
+      <h2 class="card-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        Activity Log
+      </h2>
+      <div class="log-entries" id="logEntries">
+        <div class="log-empty">No events published yet. Select a payload and hit Publish.</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+[Unit]
+Description=PSP Switch - NPCI Adapter
+After=network.target syslog.target postgresql.service kafka.service redis-server.service
+Requires=postgresql.service kafka.service redis-server.service
+
+[Service]
+User=root
+WorkingDirectory=/opt/APEX-UPI/services/psp-switch
+EnvironmentFile=/opt/APEX-UPI/infra/envs/psp-switch.env
+ExecStart=/usr/bin/java -jar npci-adapter/target/npci-adapter-1.0.0-SNAPSHOT.jar
+
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=psp-npci-adapter
+
+[Install]
+WantedBy=multi-user.target

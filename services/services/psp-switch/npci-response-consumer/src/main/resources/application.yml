@@ -1,0 +1,37 @@
+server:
+  port: ${SERVER_PORT:8084}
+
+spring:
+  application:
+    name: npci-response-consumer
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+
+kafka:
+  topics:
+    inbound-response: ${KAFKA_TOPIC_NPCI_RESPONSE:npci.inbound.response}
+
+npci:
+  callback:
+    verify-signature: ${NPCI_VERIFY_SIGNATURE:false}
+    shared-secret: ${NPCI_CALLBACK_SECRET:}
+    # Org ID to validate in callback headers
+    expected-org-id: ${NPCI_ORG_ID:DEMOPSP}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.pspswitch.npciresponse: ${LOG_LEVEL:INFO}

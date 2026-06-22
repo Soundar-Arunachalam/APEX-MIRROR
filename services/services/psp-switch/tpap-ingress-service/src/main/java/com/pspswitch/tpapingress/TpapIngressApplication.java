@@ -1,0 +1,12 @@
+package com.pspswitch.tpapingress;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class TpapIngressApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(TpapIngressApplication.class, args);
+    }
+}

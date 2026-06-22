@@ -1,0 +1,13 @@
+{
+  "name": "tpap-webhook-listener",
+  "version": "1.0.0",
+  "description": "TPAP Egress Demo — Webhook Listener & Event History",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

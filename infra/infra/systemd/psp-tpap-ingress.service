@@ -1,0 +1,26 @@
+[Unit]
+Description=PSP Switch - TPAP Ingress Service
+After=network.target syslog.target postgresql.service kafka.service redis-server.service
+Requires=postgresql.service kafka.service redis-server.service
+
+[Service]
+User=root
+# Change WorkingDirectory to the actual path on your VM where the repo is cloned
+WorkingDirectory=/opt/APEX-UPI/services/psp-switch
+
+# Load environment variables (ensure this file exists on your VM)
+EnvironmentFile=/opt/APEX-UPI/infra/envs/psp-switch.env
+
+# Execute the JAR
+ExecStart=/usr/bin/java -jar tpap-ingress-service/target/tpap-ingress-service-1.0.0-SNAPSHOT.jar
+
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=psp-tpap-ingress
+
+[Install]
+WantedBy=multi-user.target

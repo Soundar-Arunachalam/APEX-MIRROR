@@ -1,0 +1,27 @@
+:root {
+  --ifm-color-primary: #4f8ef7;
+  --ifm-color-primary-dark: #2a74f5;
+  --ifm-color-primary-darker: #1a68f4;
+  --ifm-color-primary-darkest: #0851d0;
+  --ifm-color-primary-light: #74a8f9;
+  --ifm-color-primary-lighter: #84b2fa;
+  --ifm-color-primary-lightest: #b4ccfc;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #4f8ef7;
+  --ifm-background-color: #0d1117;
+  --ifm-navbar-background-color: #161b22;
+  --ifm-sidebar-background-color: #161b22;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* State badges */
+.badge--success { background-color: #238636; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+.badge--fail    { background-color: #da3633; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+.badge--unknown { background-color: #9e6a03; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+.badge--comp    { background-color: #8957e5; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+
+table th { background-color: #161b22; }

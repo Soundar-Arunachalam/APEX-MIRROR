@@ -1,0 +1,50 @@
+server:
+  port: ${SERVER_PORT:8083}
+
+spring:
+  application:
+    name: tpap-egress-service
+
+  datasource:
+    url: ${POSTGRES_URL_EGRESS:jdbc:postgresql://localhost:5432/egress_db}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  sql:
+    init:
+      mode: always
+
+  kafka:
+    consumer:
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+      group-id: tpap-egress-service
+      auto-offset-reset: earliest
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.default.type: com.pspswitch.tpapegress.model.event.SwitchCompletedEvent
+        spring.json.trusted.packages: "*"
+
+tpap:
+  egress:
+    kafka:
+      topic: ${KAFKA_TOPIC_SWITCH_COMPLETED:psp.switch.completed.events}
+    webhook:
+      timeout-seconds: 5
+      log-all-attempts: false
+      retry:
+        max-attempts: 5
+        initial-interval-ms: 1000
+        multiplier: 2.0
+        max-interval-ms: 10000

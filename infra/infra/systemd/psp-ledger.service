@@ -1,0 +1,21 @@
+[Unit]
+Description=PSP Switch - Ledger Service
+After=network.target syslog.target postgresql.service kafka.service redis-server.service
+Requires=postgresql.service kafka.service redis-server.service
+
+[Service]
+User=root
+WorkingDirectory=/opt/APEX-UPI/services/psp-switch
+EnvironmentFile=/opt/APEX-UPI/infra/envs/psp-switch.env
+ExecStart=/usr/bin/java -jar ledger-service/target/ledger-service-1.0.0.jar
+
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=psp-ledger
+
+[Install]
+WantedBy=multi-user.target

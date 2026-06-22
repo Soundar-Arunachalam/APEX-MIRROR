@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banking Switch Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    
+    <div class="container">
+        <header class="glass-panel header">
+            <h1>⚡ Banking Switch <span class="highlight">Monitor</span></h1>
+            <div class="status-indicator">
+                <div class="pulse"></div>
+                <span>Live Event Stream</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <aside class="glass-panel control-center">
+                <h2>Control Center</h2>
+                
+                <div class="form-group">
+                    <h3>Simulate Balance Enquiry</h3>
+                    <input type="text" id="balPayerAddr" placeholder="Payer VPA (e.g., user@bank)" value="user@bank">
+                    <input type="text" id="balDeviceId" placeholder="Device ID" value="device123">
+                    <button id="btnBalEnq" class="btn primary-btn">Send ReqBalEnq</button>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="form-group">
+                    <h3>Simulate Payment</h3>
+                    <input type="text" id="payPayerAddr" placeholder="Payer VPA" value="user@bank">
+                    <input type="text" id="payPayeeAddr" placeholder="Payee VPA" value="merchant@bank">
+                    <input type="number" id="payAmount" placeholder="Amount" value="100.00">
+                    <button id="btnPay" class="btn secondary-btn">Send ReqPay</button>
+                </div>
+            </aside>
+
+            <main class="glass-panel event-stream">
+                <div class="stream-header">
+                    <h2>Kafka Event Stream</h2>
+                    <button id="btnClear" class="btn small-btn">Clear</button>
+                </div>
+                <div id="eventLog" class="event-log">
+                    <!-- Events will be appended here -->
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

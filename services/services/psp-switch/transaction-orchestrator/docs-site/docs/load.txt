@@ -1,0 +1,27 @@
+http://localhost:8081/api/v1/control/cbs-failure?enabled=true
+
+{
+  "tid": "TID-CBS-011",
+  "tr": "ORD-CBS-",
+  "pa": "merchant@yesbank",
+  "pn": "Amazon Store",
+  "mc": "5411",
+  "mid": "AMZ-01",
+  "msid": "STORE-01",
+  "mtid": "POS-01",
+  "am": 500.00,
+  "cu": "INR",
+  "mode": "16"
+}
+
+-------
+{
+  "tid": "TID-P2P-001",
+  "tr": "ORD-P2P-001",
+  "pa": "friend@okicici",
+  "pn": "Alex Chen",
+  "mc": "0000",
+  "am": 150.00,
+  "cu": "INR",
+  "mode": "04"
+}

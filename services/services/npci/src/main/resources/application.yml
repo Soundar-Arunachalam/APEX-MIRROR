@@ -1,0 +1,21 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: npci-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/npci_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  bankswitch-host: ${BANKSWITCH_HOST:http://localhost:8081}
+  psp-callback-url: ${PSP_CALLBACK_URL:http://localhost:8084}

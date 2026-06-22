@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UPI PSP Switch — Live Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+    :root{--bg:#050a12;--surface:#090f1a;--card:#0c1420;--border:#132035;--border-glow:#1a3a5a;--text:#c8daea;--muted:#3a5570;--accent:#00c8ff;--green:#00e676;--red:#ff3d5a;--gold:#ffbe00;--purple:#b06cff;--orange:#ff7043;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+    body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 60% 40% at 10% 20%,#00c8ff08 0%,transparent 60%),radial-gradient(ellipse 50% 60% at 90% 80%,#b06cff06 0%,transparent 60%);pointer-events:none;}
+    header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:linear-gradient(90deg,#060d18 0%,#0a1525 100%);border-bottom:1px solid var(--border-glow);box-shadow:0 1px 30px #00c8ff0d;}
+    .logo{display:flex;align-items:center;gap:14px;}
+    .logo-mark{width:44px;height:44px;background:linear-gradient(135deg,#00c8ff,#0055cc);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff;letter-spacing:-1px;box-shadow:0 0 20px #00c8ff33;}
+    .logo-text h1{font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.5px;}
+    .logo-text p{font-size:11px;color:var(--muted);margin-top:1px;font-family:'JetBrains Mono',monospace;}
+    .header-right{display:flex;align-items:center;gap:16px;}
+    .conn-badge{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);padding:7px 14px;border-radius:20px;font-size:12px;font-family:'JetBrains Mono',monospace;}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--red);transition:background .4s;}
+    .dot.live{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+    .time-badge{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--border);padding:7px 14px;border-radius:20px;}
+    .clear-btn{background:#ff3d5a22;border:1px solid #ff3d5a44;color:#ff3d5a;padding:6px 14px;border-radius:8px;font-size:11px;cursor:pointer;font-family:'JetBrains Mono',monospace;}
+    main{position:relative;z-index:1;padding:24px 32px;display:flex;flex-direction:column;gap:20px;}
+    .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;transition:border-color .3s,box-shadow .3s;}
+    .stat:hover{border-color:var(--border-glow);box-shadow:0 4px 24px #00c8ff0a;}
+    .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-family:'JetBrains Mono',monospace;}
+    .stat-value{font-size:32px;font-weight:800;line-height:1;}
+    .stat-sub{font-size:11px;color:var(--muted);margin-top:6px;}
+    .c-blue{color:var(--accent);}.c-green{color:var(--green);}.c-red{color:var(--red);}.c-gold{color:var(--gold);}.c-purple{color:var(--purple);}
+    .arch-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+    .panel-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);}
+    .panel-title{font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;}
+    .panel-sub{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+    .arch-body{padding:20px 24px;}
+    .flow-row{display:flex;align-items:center;gap:0;}
+    .flow-node{flex:1;border:1px solid var(--border);border-radius:12px;padding:14px 12px;text-align:center;background:var(--surface);position:relative;transition:border-color .4s,box-shadow .4s,background .4s;}
+    .flow-node.pulsing{border-color:var(--accent);background:#00c8ff08;box-shadow:0 0 20px #00c8ff22;}
+    .flow-node.success{border-color:var(--green);background:#00e67608;}
+    .flow-node.reversal{border-color:var(--gold);background:#ffbe0008;}
+    .flow-node .icon{font-size:22px;margin-bottom:6px;}
+    .flow-node .name{font-size:12px;font-weight:700;color:var(--text);}
+    .flow-node .sub{font-size:10px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace;}
+    .flow-node .port{font-size:9px;color:var(--border-glow);margin-top:4px;font-family:'JetBrains Mono',monospace;}
+    .flow-arrow{flex:0 0 48px;text-align:center;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;}
+    .arrow-line{width:100%;height:2px;background:var(--border);transition:background .4s;}
+    .arrow-line.active{background:var(--accent);box-shadow:0 0 8px var(--accent);}
+    .arrow-line.reverse{background:var(--gold);box-shadow:0 0 8px var(--gold);}
+    .arrow-tip{font-size:14px;color:var(--muted);}
+    .arrow-label{font-size:8px;color:var(--muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+    .db-pair{display:flex;flex-direction:column;gap:8px;flex:1;}
+    .db-box{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface);display:flex;align-items:center;gap:10px;transition:border-color .4s,box-shadow .4s;}
+    .db-box.debit-active{border-color:var(--orange);box-shadow:0 0 14px #ff704322;}
+    .db-box.credit-active{border-color:var(--green);box-shadow:0 0 14px #00e67622;}
+    .db-box.reversal-active{border-color:var(--gold);box-shadow:0 0 14px #ffbe0022;}
+    .db-icon{font-size:20px;}
+    .db-info .db-name{font-size:11px;font-weight:700;}
+    .db-info .db-desc{font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+    .db-badge{margin-left:auto;font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;font-family:'JetBrains Mono',monospace;}
+    .db-badge.debit{background:#ff704320;color:var(--orange);border:1px solid #ff704340;}
+    .db-badge.credit{background:#00e67620;color:var(--green);border:1px solid #00e67640;}
+    .reversal-banner{display:none;margin-top:14px;background:linear-gradient(90deg,#ffbe0010,#ff3d5a08);border:1px solid #ffbe0040;border-radius:10px;padding:12px 18px;font-size:12px;color:var(--gold);font-family:'JetBrains Mono',monospace;}
+    .reversal-banner.show{display:flex;align-items:center;gap:10px;}
+    .content-grid{display:grid;grid-template-columns:1fr 380px;gap:20px;}
+    .feed-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+    .feed-body{max-height:420px;overflow-y:auto;}
+    .feed-body::-webkit-scrollbar{width:4px;}
+    .feed-body::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:2px;}
+    .feed-item{display:grid;grid-template-columns:28px 1fr auto;gap:12px;align-items:start;padding:14px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;}
+    .feed-item:hover{background:#0f1e30;}
+    .feed-item:last-child{border-bottom:none;}
+    @keyframes fadeIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+    .feed-icon{font-size:18px;padding-top:2px;}
+    .feed-txn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);font-weight:600;}
+    .feed-vpa{font-size:12px;color:var(--text);margin:3px 0;}
+    .feed-msg{font-size:11px;color:var(--muted);}
+    .feed-right{text-align:right;}
+    .feed-amount{font-size:13px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace;}
+    .feed-time{font-size:10px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono',monospace;}
+    .badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:.8px;font-family:'JetBrains Mono',monospace;margin-top:4px;}
+    .b-initiated{background:#00c8ff18;color:var(--accent);border:1px solid #00c8ff35;}
+    .b-routing{background:#b06cff18;color:var(--purple);border:1px solid #b06cff35;}
+    .b-debit{background:#ff704318;color:var(--orange);border:1px solid #ff704335;}
+    .b-credit{background:#00e67618;color:var(--green);border:1px solid #00e67635;}
+    .b-success{background:#00e67618;color:var(--green);border:1px solid #00e67635;}
+    .b-failed{background:#ff3d5a18;color:var(--red);border:1px solid #ff3d5a35;}
+    .b-reversal{background:#ffbe0018;color:var(--gold);border:1px solid #ffbe0035;}
+    .b-reversed{background:#ffbe0018;color:var(--gold);border:1px solid #ffbe0035;}
+    .b-pending{background:#3a557018;color:var(--muted);border:1px solid #3a557035;}
+    .right-col{display:flex;flex-direction:column;gap:16px;}
+    .inspector{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;flex:0 0 auto;}
+    .inspector-empty{padding:32px;text-align:center;color:var(--muted);font-size:13px;}
+    .inspector-body{padding:16px 18px;}
+    .insp-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+    .insp-row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+    .insp-label{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;}
+    .insp-value{font-size:12px;font-family:'JetBrains Mono',monospace;text-align:right;max-width:220px;word-break:break-all;}
+    .insp-reversal-box{background:linear-gradient(135deg,#ffbe0008,#ff3d5a06);border:1px solid #ffbe0030;border-radius:10px;padding:10px 14px;margin-top:12px;font-size:11px;color:var(--gold);font-family:'JetBrains Mono',monospace;line-height:1.5;}
+    .chart-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;flex:1;}
+    .chart-wrap{padding:16px;height:180px;}
+    .timeline-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+    .timeline-body{padding:16px 20px;}
+    .tl-empty{color:var(--muted);font-size:12px;text-align:center;padding:20px;font-family:'JetBrains Mono',monospace;}
+    .tl-entry{display:flex;gap:16px;margin-bottom:16px;}
+    .tl-entry:last-child{margin-bottom:0;}
+    .tl-left{display:flex;flex-direction:column;align-items:center;}
+    .tl-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+    .tl-line{width:2px;flex:1;background:var(--border);min-height:20px;}
+    .tl-content{flex:1;}
+    .tl-step{font-size:12px;font-weight:700;}
+    .tl-detail{font-size:10px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace;line-height:1.4;}
+    .tl-time{font-size:9px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono',monospace;}
+    .send-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+    .send-body{padding:16px 20px;}
+    .send-row{display:flex;gap:10px;flex-wrap:wrap;}
+    .inp{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:9px 12px;border-radius:8px;outline:none;transition:border-color .2s;}
+    .inp:focus{border-color:var(--accent);}
+    .inp-vpa{flex:1;min-width:130px;}
+    .inp-amt{width:100px;}
+    .btn{padding:9px 18px;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;transition:all .2s;}
+    .btn-primary{background:var(--accent);color:#000;}
+    .btn-primary:hover{background:#33d6ff;}
+    .btn-danger{background:var(--red);color:#fff;}
+    .btn-danger:hover{background:#ff6070;}
+    .send-note{font-size:10px;color:var(--muted);margin-top:10px;font-family:'JetBrains Mono',monospace;}
+    .send-note span{color:var(--gold);}
+    .topics-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+    .topics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px;}
+    .topic-tag{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);transition:border-color .4s,color .4s;}
+    .topic-tag.lit{border-color:var(--accent);color:var(--accent);}
+    .topic-tag .topic-name{font-weight:700;font-size:10px;}
+    .topic-tag .topic-desc{font-size:9px;margin-top:2px;opacity:.7;}
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-mark">UPI</div>
+    <div class="logo-text">
+      <h1>PSP Switch — Live Monitor</h1>
+      <p>NPCI · PSP · CBS Debit DB · CBS Credit DB · Auto-Reversal Engine</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="clear-btn" onclick="clearAll()">Clear</button>
+    <div class="conn-badge"><div class="dot" id="connDot"></div><span id="connLabel">Connecting…</span></div>
+    <div class="time-badge" id="clock">--:--:--</div>
+  </div>
+</header>
+<main>
+  <div class="stats-row">
+    <div class="stat"><div class="stat-label">Total Transactions</div><div class="stat-value c-blue" id="statTotal">0</div><div class="stat-sub">unique payments</div></div>
+    <div class="stat"><div class="stat-label">Success</div><div class="stat-value c-green" id="statSuccess">0</div><div class="stat-sub">fully settled</div></div>
+    <div class="stat"><div class="stat-label">Auto-Reversed</div><div class="stat-value c-gold" id="statReversed">0</div><div class="stat-sub">NPCI detected failure</div></div>
+    <div class="stat"><div class="stat-label">In-Flight</div><div class="stat-value c-purple" id="statInflight">0</div><div class="stat-sub">being processed</div></div>
+    <div class="stat"><div class="stat-label">Total Value</div><div class="stat-value c-blue" id="statValue">₹0</div><div class="stat-sub">cumulative amount</div></div>
+  </div>
+  <div class="arch-panel">
+    <div class="panel-header">
+      <span class="panel-title">Live Architecture Flow</span>
+      <span class="panel-sub" id="flowTxnId">Waiting for transaction…</span>
+    </div>
+    <div class="arch-body">
+      <div class="flow-row">
+        <div class="flow-node" id="nodePsp"><div class="icon">📱</div><div class="name">PSP Switch</div><div class="sub">Payment Initiation</div><div class="port">:8081</div></div>
+        <div class="flow-arrow"><div class="arrow-line" id="arrow1"></div><div class="arrow-label">Kafka</div><div class="arrow-tip">→</div></div>
+        <div class="flow-node" id="nodeNpci"><div class="icon">🏛</div><div class="name">NPCI Router</div><div class="sub">Switching + Reversal</div><div class="port">:8082</div></div>
+        <div class="flow-arrow"><div class="arrow-line" id="arrow2"></div><div class="arrow-label">Route</div><div class="arrow-tip">→</div></div>
+        <div class="flow-node" id="nodeCbs" style="flex:0 0 auto;width:100px;"><div class="icon">🏦</div><div class="name">CBS Service</div><div class="sub">Core Banking</div><div class="port">:8083</div></div>
+        <div class="flow-arrow" style="flex:0 0 32px;"><div class="arrow-line" id="arrow3"></div><div class="arrow-label">Persist</div><div class="arrow-tip">→</div></div>
+        <div class="db-pair">
+          <div class="db-box" id="dbDebit"><div class="db-icon">🗄️</div><div class="db-info"><div class="db-name" style="color:var(--orange)">CBS Debit DB</div><div class="db-desc">cbs_debit · port 5433</div></div><div class="db-badge debit">DEBIT</div></div>
+          <div class="db-box" id="dbCredit"><div class="db-icon">🗄️</div><div class="db-info"><div class="db-name" style="color:var(--green)">CBS Credit DB</div><div class="db-desc">cbs_credit · port 5434</div></div><div class="db-badge credit">CREDIT</div></div>
+        </div>
+      </div>
+      <div class="reversal-banner" id="reversalBanner"><span>⚠️</span><span id="reversalBannerText"></span></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="send-panel">
+      <div class="panel-header"><span class="panel-title">Send Test Transaction</span><span class="panel-sub">POST → PSP :8081</span></div>
+      <div class="send-body">
+        <div class="send-row">
+          <input class="inp inp-vpa" id="payerVpa" value="alice@sbi">
+          <input class="inp inp-vpa" id="payeeVpa" value="bob@hdfc">
+          <input class="inp inp-amt" id="amount" value="500" type="number">
+          <button class="btn btn-primary" onclick="sendTxn(false)">▶ Pay</button>
+          <button class="btn btn-danger" onclick="sendTxn(true)">⚡ Simulate Failure</button>
+        </div>
+        <div class="send-note"><span>⚡ Simulate Failure</span> → debit succeeds, credit bank times out → NPCI auto-reversal triggers → payer gets money back</div>
+      </div>
+    </div>
+    <div class="topics-panel">
+      <div class="panel-header"><span class="panel-title">Kafka Topics</span><span class="panel-sub">live activity</span></div>
+      <div class="topics-grid">
+        <div class="topic-tag" id="topic1"><div class="topic-name">upi.transactions.initiated</div><div class="topic-desc">PSP → NPCI</div></div>
+        <div class="topic-tag" id="topic2"><div class="topic-name">upi.cbs.debit</div><div class="topic-desc">NPCI → CBS Debit</div></div>
+        <div class="topic-tag" id="topic3"><div class="topic-name">upi.cbs.debit.confirm</div><div class="topic-desc">CBS → NPCI</div></div>
+        <div class="topic-tag" id="topic4"><div class="topic-name">upi.cbs.credit</div><div class="topic-desc">NPCI → CBS Credit</div></div>
+        <div class="topic-tag" id="topic5"><div class="topic-name">upi.cbs.credit.confirm</div><div class="topic-desc">CBS → NPCI</div></div>
+        <div class="topic-tag" id="topic6"><div class="topic-name">upi.cbs.reversal</div><div class="topic-desc">NPCI → CBS (reversal)</div></div>
+        <div class="topic-tag" id="topic7"><div class="topic-name">upi.cbs.reversal.confirm</div><div class="topic-desc">CBS → NPCI confirmed</div></div>
+        <div class="topic-tag" id="topic8"><div class="topic-name">upi.dashboard.events</div><div class="topic-desc">→ Dashboard WebSocket</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="content-grid">
+    <div class="feed-panel">
+      <div class="panel-header"><span class="panel-title">Live Event Feed</span><span class="panel-sub" id="feedCount">0 events</span></div>
+      <div class="feed-body" id="feedBody"><div style="padding:32px;text-align:center;color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace;">Waiting for events from Kafka…<br>Send a transaction above to start.</div></div>
+    </div>
+    <div class="right-col">
+      <div class="inspector">
+        <div class="panel-header"><span class="panel-title">Transaction Inspector</span><span class="panel-sub">latest event</span></div>
+        <div id="inspectorBody"><div class="inspector-empty">Click any event to inspect</div></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">Status Distribution</span><span class="panel-sub">live counts</span></div>
+        <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div class="timeline-panel">
+    <div class="panel-header"><span class="panel-title">Auto-Reversal Timeline</span><span class="panel-sub">NPCI failure detection → CBS credit back to payer</span></div>
+    <div class="timeline-body" id="timelineBody"><div class="tl-empty">No reversals yet — use ⚡ Simulate Failure to trigger auto-reversal</div></div>
+  </div>
+</main>
+<script>
+  var stats = {total:0,success:0,reversed:0,inflight:0,value:0};
+  var feedCount = 0;
+  var reversalTimelines = {};
+  var stompClient = null;
+  var chart = null;
+  var chartData = {success:0,failed:0,reversed:0,routing:0,debit:0,credit:0};
+  var seenTxns = {};
+  var countedSuccess = {};
+  var countedReversed = {};
+
+  setInterval(function(){
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-IN',{hour12:false})+' IST';
+  },1000);
+
+  function initChart(){
+    var ctx = document.getElementById('statusChart').getContext('2d');
+    chart = new Chart(ctx,{
+      type:'doughnut',
+      data:{labels:['Success','Reversed','In-Progress','Failed'],datasets:[{data:[0,0,0,0],backgroundColor:['#00e67640','#ffbe0040','#00c8ff40','#ff3d5a40'],borderColor:['#00e676','#ffbe00','#00c8ff','#ff3d5a'],borderWidth:2,hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#3a5570',font:{size:10,family:'JetBrains Mono'}}}},cutout:'65%'}
+    });
+  }
+
+  function updateChart(){
+    if(!chart)return;
+    chart.data.datasets[0].data=[chartData.success,chartData.reversed,chartData.routing+chartData.debit,chartData.failed];
+    chart.update('none');
+  }
+
+  function saveToStorage(ev){
+    try{
+      var stored = JSON.parse(localStorage.getItem('upi_txns')||'{}');
+      stored[ev.txnId] = ev;
+      localStorage.setItem('upi_txns', JSON.stringify(stored));
+    }catch(e){}
+  }
+
+  function loadFromStorage(){
+    try{
+      var stored = JSON.parse(localStorage.getItem('upi_txns')||'{}');
+      var events = Object.values(stored);
+      events.forEach(function(ev){ handleEvent(ev, true); });
+    }catch(e){}
+  }
+
+  function clearAll(){
+    try{ localStorage.removeItem('upi_txns'); }catch(e){}
+    stats = {total:0,success:0,reversed:0,inflight:0,value:0};
+    feedCount = 0;
+    chartData = {success:0,failed:0,reversed:0,routing:0,debit:0,credit:0};
+    seenTxns = {}; countedSuccess = {}; countedReversed = {};
+    reversalTimelines = {};
+    document.getElementById('feedBody').innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:12px;font-family:\'JetBrains Mono\',monospace;">Cleared. Send a transaction to start.</div>';
+    document.getElementById('feedCount').textContent = '0 events';
+    document.getElementById('statTotal').textContent = '0';
+    document.getElementById('statSuccess').textContent = '0';
+    document.getElementById('statReversed').textContent = '0';
+    document.getElementById('statInflight').textContent = '0';
+    document.getElementById('statValue').textContent = '₹0';
+    document.getElementById('timelineBody').innerHTML = '<div class="tl-empty">No reversals yet</div>';
+    if(chart){chart.data.datasets[0].data=[0,0,0,0];chart.update('none');}
+  }
+
+  function connect(){
+    var sock = new SockJS('/ws');
+    stompClient = Stomp.over(sock);
+    stompClient.debug = function(){};
+    stompClient.connect({}, function(){
+      document.getElementById('connDot').classList.add('live');
+      document.getElementById('connLabel').textContent = 'Connected';
+      stompClient.subscribe('/topic/transactions', function(msg){
+        handleEvent(JSON.parse(msg.body), false);
+      });
+    }, function(){
+      document.getElementById('connDot').classList.remove('live');
+      document.getElementById('connLabel').textContent = 'Reconnecting…';
+      setTimeout(connect, 3000);
+    });
+  }
+
+  function handleEvent(ev, fromStorage){
+    fromStorage = fromStorage || false;
+    var status = ev.status || '';
+    var amount = parseFloat(ev.amount) || 0;
+    var txnId = ev.txnId || '';
+
+    feedCount++;
+    document.getElementById('feedCount').textContent = feedCount + ' events';
+
+    // Count each txnId only once for total
+    if(txnId && !seenTxns[txnId]){ seenTxns[txnId]=true; stats.total++; }
+
+    // Terminal states — deduplicated per txnId
+    if(status==='SUCCESS' && !countedSuccess[txnId]){ countedSuccess[txnId]=true; stats.success++; stats.value+=amount; chartData.success++; }
+    if(status==='REVERSED' && !countedReversed[txnId]){ countedReversed[txnId]=true; stats.reversed++; chartData.reversed++; }
+    if(status==='FAILED'){ chartData.failed++; }
+
+    // In-flight
+    if(status==='INITIATED'||status==='ROUTING'){ stats.inflight++; chartData.routing++; }
+    if(status==='SUCCESS'||status==='REVERSED'||status==='FAILED'){ stats.inflight=Math.max(0,stats.inflight-1); }
+    if(status==='DEBIT_SUCCESS'||status==='DEBIT_PENDING') chartData.debit++;
+
+    // Save latest event per txnId
+    if(!fromStorage && txnId) saveToStorage(ev);
+
+    document.getElementById('statTotal').textContent = stats.total;
+    document.getElementById('statSuccess').textContent = stats.success;
+    document.getElementById('statReversed').textContent = stats.reversed;
+    document.getElementById('statInflight').textContent = stats.inflight;
+    document.getElementById('statValue').textContent = '₹'+stats.value.toLocaleString('en-IN');
+
+    updateChart();
+    updateFlowNodes(ev);
+    updateInspector(ev);
+    addFeedItem(ev);
+    updateTopics(ev);
+    updateReversalTimeline(ev);
+  }
+
+  function clearFlow(){
+    ['nodePsp','nodeNpci','nodeCbs'].forEach(function(id){document.getElementById(id).className='flow-node';});
+    ['arrow1','arrow2','arrow3'].forEach(function(id){document.getElementById(id).className='arrow-line';});
+    document.getElementById('dbDebit').className='db-box';
+    document.getElementById('dbCredit').className='db-box';
+  }
+
+  function updateFlowNodes(ev){
+    var status=ev.status||'', txnId=ev.txnId||'';
+    document.getElementById('flowTxnId').textContent=txnId?'TXN: '+txnId:'Waiting…';
+    clearFlow();
+    var banner=document.getElementById('reversalBanner');
+    banner.classList.remove('show');
+    if(status==='INITIATED'||status==='ROUTING'){
+      document.getElementById('nodePsp').classList.add('pulsing');
+      document.getElementById('arrow1').classList.add('active');
+      document.getElementById('nodeNpci').classList.add('pulsing');
+    }else if(status==='DEBIT_PENDING'||status==='DEBIT_SUCCESS'){
+      document.getElementById('nodePsp').classList.add('success');
+      document.getElementById('arrow1').classList.add('active');
+      document.getElementById('nodeNpci').classList.add('pulsing');
+      document.getElementById('arrow2').classList.add('active');
+      document.getElementById('nodeCbs').classList.add('pulsing');
+      document.getElementById('arrow3').classList.add('active');
+      document.getElementById('dbDebit').classList.add('debit-active');
+    }else if(status==='CREDIT_PENDING'){
+      document.getElementById('nodePsp').classList.add('success');
+      document.getElementById('nodeNpci').classList.add('pulsing');
+      document.getElementById('nodeCbs').classList.add('pulsing');
+      document.getElementById('arrow2').classList.add('active');
+      document.getElementById('arrow3').classList.add('active');
+      document.getElementById('dbDebit').classList.add('debit-active');
+      document.getElementById('dbCredit').classList.add('credit-active');
+    }else if(status==='CREDIT_SUCCESS'||status==='SUCCESS'){
+      ['nodePsp','nodeNpci','nodeCbs'].forEach(function(id){document.getElementById(id).classList.add('success');});
+      ['arrow1','arrow2','arrow3'].forEach(function(id){document.getElementById(id).classList.add('active');});
+      document.getElementById('dbDebit').classList.add('debit-active');
+      document.getElementById('dbCredit').classList.add('credit-active');
+    }else if(status==='REVERSAL_INITIATED'){
+      ['nodePsp','nodeNpci','nodeCbs'].forEach(function(id){document.getElementById(id).classList.add('reversal');});
+      document.getElementById('arrow2').classList.add('reverse');
+      document.getElementById('arrow3').classList.add('reverse');
+      document.getElementById('dbDebit').classList.add('reversal-active');
+      banner.classList.add('show');
+      document.getElementById('reversalBannerText').textContent='⚠ NPCI detected credit failure for '+txnId+' — initiating auto-reversal';
+    }else if(status==='REVERSED'){
+      ['nodePsp','nodeNpci','nodeCbs'].forEach(function(id){document.getElementById(id).classList.add('reversal');});
+      ['arrow1','arrow2','arrow3'].forEach(function(id){document.getElementById(id).classList.add('reverse');});
+      document.getElementById('dbDebit').classList.add('reversal-active');
+      banner.classList.add('show');
+      document.getElementById('reversalBannerText').textContent='✓ Auto-reversal complete for '+txnId+' — payer credited back via CBS Debit DB';
+    }
+  }
+
+  function updateInspector(ev){
+    var sc={SUCCESS:'var(--green)',REVERSED:'var(--gold)',REVERSAL_INITIATED:'var(--gold)',FAILED:'var(--red)',ROUTING:'var(--purple)',INITIATED:'var(--accent)',DEBIT_PENDING:'var(--orange)',DEBIT_SUCCESS:'var(--orange)',CREDIT_PENDING:'var(--text)',CREDIT_SUCCESS:'var(--green)'};
+    var c=sc[ev.status]||'var(--muted)';
+    var html='<div class="inspector-body">'
+            +'<div class="insp-row"><span class="insp-label">TXN ID</span><span class="insp-value" style="color:var(--accent)">'+(ev.txnId||'-')+'</span></div>'
+            +'<div class="insp-row"><span class="insp-label">RRN</span><span class="insp-value">'+(ev.rrn||'-')+'</span></div>'
+            +'<div class="insp-row"><span class="insp-label">Payer VPA</span><span class="insp-value">'+(ev.payerVpa||'-')+'</span></div>'
+            +'<div class="insp-row"><span class="insp-label">Payee VPA</span><span class="insp-value">'+(ev.payeeVpa||'-')+'</span></div>'
+            +'<div class="insp-row"><span class="insp-label">Amount</span><span class="insp-value" style="color:var(--green)">₹'+parseFloat(ev.amount||0).toLocaleString('en-IN')+'</span></div>'
+            +'<div class="insp-row"><span class="insp-label">Status</span><span class="insp-value" style="color:'+c+'">'+(ev.status||'-')+'</span></div>'
+            +'<div class="insp-row"><span class="insp-label">DB Source</span><span class="insp-value">'+(ev.dbSource||'NPCI_ROUTER')+'</span></div>'
+            +'<div class="insp-row"><span class="insp-label">Message</span><span class="insp-value" style="font-size:10px;color:var(--muted)">'+(ev.message||'-')+'</span></div>';
+    if(ev.reversalInitiated||ev.reversalReason) html+='<div class="insp-reversal-box">⚠ Auto-Reversal Triggered<br>'+(ev.reversalReason||'NPCI initiated reversal')+'</div>';
+    html+='</div>';
+    document.getElementById('inspectorBody').innerHTML=html;
+  }
+
+  function addFeedItem(ev){
+    var feed=document.getElementById('feedBody');
+    if(feed.querySelector('div[style]')) feed.innerHTML='';
+    var icons={SUCCESS:'✅',REVERSED:'↩️',REVERSAL_INITIATED:'⚠️',FAILED:'❌',ROUTING:'🔀',INITIATED:'🚀',DEBIT_PENDING:'🏧',DEBIT_SUCCESS:'🏧',CREDIT_PENDING:'💳',CREDIT_SUCCESS:'💳'};
+    var badges={SUCCESS:'b-success',REVERSED:'b-reversed',REVERSAL_INITIATED:'b-reversal',FAILED:'b-failed',ROUTING:'b-routing',INITIATED:'b-initiated',DEBIT_PENDING:'b-debit',DEBIT_SUCCESS:'b-debit',CREDIT_PENDING:'b-credit',CREDIT_SUCCESS:'b-credit'};
+    var t=new Date().toLocaleTimeString('en-IN',{hour12:false});
+    var item=document.createElement('div');
+    item.className='feed-item';
+    item.innerHTML='<div class="feed-icon">'+(icons[ev.status]||'📋')+'</div>'
+            +'<div><div class="feed-txn">'+(ev.txnId||'')+'</div>'
+            +'<div class="feed-vpa">'+(ev.payerVpa||'')+' → '+(ev.payeeVpa||'')+'</div>'
+            +'<div class="feed-msg">'+(ev.message||'')+'</div>'
+            +'<span class="badge '+(badges[ev.status]||'b-pending')+'">'+(ev.status||'')+'</span></div>'
+            +'<div class="feed-right"><div class="feed-amount">₹'+parseFloat(ev.amount||0).toLocaleString('en-IN')+'</div><div class="feed-time">'+t+'</div></div>';
+    item.onclick=function(){ updateInspector(ev); };
+    feed.insertBefore(item,feed.firstChild);
+    while(feed.children.length>60) feed.removeChild(feed.lastChild);
+  }
+
+  var topicMap={INITIATED:['topic1'],ROUTING:['topic1','topic2'],DEBIT_PENDING:['topic2'],DEBIT_SUCCESS:['topic3'],CREDIT_PENDING:['topic4'],CREDIT_SUCCESS:['topic5'],SUCCESS:['topic5','topic8'],REVERSAL_INITIATED:['topic6'],REVERSED:['topic7','topic8'],FAILED:['topic8']};
+  function updateTopics(ev){
+    document.querySelectorAll('.topic-tag').forEach(function(t){t.classList.remove('lit');});
+    var topics=topicMap[ev.status]||['topic8'];
+    topics.forEach(function(id){var el=document.getElementById(id);if(el){el.classList.add('lit');setTimeout(function(){el.classList.remove('lit');},2000);}});
+  }
+
+  var reversalSteps={ROUTING:{step:'NPCI Received',color:'var(--accent)',dot:'#00c8ff'},DEBIT_PENDING:{step:'CBS Debit Requested',color:'var(--orange)',dot:'#ff7043'},DEBIT_SUCCESS:{step:'Debit DB Written ✓',color:'var(--orange)',dot:'#ff7043'},CREDIT_PENDING:{step:'CBS Credit Attempted',color:'var(--muted)',dot:'#3a5570'},REVERSAL_INITIATED:{step:'⚠ NPCI Detected Failure — Reversal Initiated',color:'var(--gold)',dot:'#ffbe00'},REVERSED:{step:'✓ CBS Debit DB: Payer Credited Back',color:'var(--green)',dot:'#00e676'}};
+
+  function updateReversalTimeline(ev){
+    var status=ev.status, txnId=ev.txnId;
+    var isRev=ev.reversalInitiated||status==='REVERSAL_INITIATED'||status==='REVERSED';
+    if(!isRev&&!reversalTimelines[txnId]) return;
+    if(!reversalTimelines[txnId]) reversalTimelines[txnId]=[];
+    var step=reversalSteps[status];
+    if(step) reversalTimelines[txnId].push({step:step.step,color:step.color,dot:step.dot,detail:ev.message||'',time:new Date().toLocaleTimeString('en-IN',{hour12:false}),txnId:txnId});
+    var body=document.getElementById('timelineBody');
+    var all=[];
+    Object.values(reversalTimelines).forEach(function(steps){ if(steps.length>0) all.push.apply(all,steps.slice(-6)); });
+    if(!all.length){body.innerHTML='<div class="tl-empty">No reversals yet — use ⚡ Simulate Failure to trigger auto-reversal</div>';return;}
+    body.innerHTML=all.reverse().map(function(e,i){
+      return '<div class="tl-entry"><div class="tl-left"><div class="tl-dot" style="background:'+e.dot+'"></div>'+(i<all.length-1?'<div class="tl-line"></div>':'')+'</div>'
+              +'<div class="tl-content"><div class="tl-step" style="color:'+e.color+'">'+e.step+'</div>'
+              +'<div class="tl-detail">'+e.txnId+' · '+e.detail+'</div>'
+              +'<div class="tl-time">'+e.time+'</div></div></div>';
+    }).join('');
+  }
+
+  async function sendTxn(simulateFailure){
+    var payerVpa=document.getElementById('payerVpa').value||'alice@sbi';
+    var payeeVpa=document.getElementById('payeeVpa').value||'bob@hdfc';
+    var amount=document.getElementById('amount').value||'500';
+    try{
+      var res=await fetch('http://localhost:8081/api/psp/pay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payerVpa:payerVpa,payeeVpa:payeeVpa,amount:amount,simulateFailure:String(simulateFailure)})});
+      await res.json();
+    }catch(e){
+      demoSimulate(payerVpa,payeeVpa,parseFloat(amount),simulateFailure);
+    }
+  }
+
+  function demoSimulate(payerVpa,payeeVpa,amount,simulateFailure){
+    var txnId='TXN'+Math.random().toString(36).substring(2,10).toUpperCase();
+    var rrn='RRN'+txnId.substring(3,11);
+    var base={txnId:txnId,rrn:rrn,payerVpa:payerVpa,payeeVpa:payeeVpa,amount:String(amount)};
+    var normalFlow=[
+      Object.assign({},base,{status:'INITIATED',message:'PSP accepted — publishing to Kafka'}),
+      Object.assign({},base,{status:'ROUTING',message:'NPCI received and routing transaction'}),
+      Object.assign({},base,{status:'DEBIT_PENDING',message:'CBS DEBIT DB: Debiting payer account',dbSource:'CBS_DEBIT_DB'}),
+      Object.assign({},base,{status:'DEBIT_SUCCESS',message:'CBS DEBIT DB: Payer account debited successfully',dbSource:'CBS_DEBIT_DB'}),
+      Object.assign({},base,{status:'CREDIT_PENDING',message:'CBS CREDIT DB: Crediting payee account',dbSource:'CBS_CREDIT_DB'}),
+      Object.assign({},base,{status:'SUCCESS',message:'CBS CREDIT DB: Payee account credited successfully',dbSource:'CBS_CREDIT_DB'}),
+    ];
+    var failureFlow=[
+      Object.assign({},base,{status:'INITIATED',message:'PSP accepted — publishing to Kafka'}),
+      Object.assign({},base,{status:'ROUTING',message:'NPCI received and routing transaction'}),
+      Object.assign({},base,{status:'DEBIT_PENDING',message:'CBS DEBIT DB: Debiting payer account',dbSource:'CBS_DEBIT_DB'}),
+      Object.assign({},base,{status:'DEBIT_SUCCESS',message:'CBS DEBIT DB: Payer account debited successfully',dbSource:'CBS_DEBIT_DB'}),
+      Object.assign({},base,{status:'CREDIT_PENDING',message:'Credit bank timeout — NPCI monitoring for reversal'}),
+      Object.assign({},base,{status:'REVERSAL_INITIATED',message:'NPCI detected credit failure — initiating auto-reversal',reversalInitiated:true,reversalReason:'Credit bank timed out after 15200ms'}),
+      Object.assign({},base,{status:'REVERSED',message:'CBS DEBIT DB: Payer account credited back (auto-reversal complete)',dbSource:'CBS_DEBIT_DB',reversalInitiated:true}),
+    ];
+    var flow=simulateFailure?failureFlow:normalFlow;
+    var delays=simulateFailure?[0,800,1600,2800,4000,6500,8000]:[0,600,1400,2400,3400,4800];
+    flow.forEach(function(ev,i){ setTimeout(function(){ handleEvent(ev,false); },delays[i]); });
+  }
+
+  initChart();
+  loadFromStorage();
+  connect();
+</script>
+</body>
+</html>

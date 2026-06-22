@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webhook Event Explorer</title>
+<style>
+    :root {
+        --bg: #0f111a;
+        --panel-bg: #1a1d27;
+        --border: #2d313f;
+        --text: #e2e8f0;
+        --text-muted: #94a3b8;
+        --primary: #3b82f6;
+        --primary-hover: #2563eb;
+        --success: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --font: 'Segoe UI', system-ui, sans-serif;
+        --font-mono: ui-monospace, 'Cascadia Code', monospace;
+    }
+    
+    @media (prefers-color-scheme: light) {
+        body.light-theme {
+            --bg: #f8fafc;
+            --panel-bg: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-muted: #64748b;
+        }
+    }
+
+    body {
+        margin: 0;
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
+
+    /* Controls */
+    .controls-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .pill-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .pill {
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+    }
+
+    .pill:hover { border-color: var(--primary); }
+    .pill.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+    .dropdown {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.9rem;
+        min-width: 250px;
+        cursor: pointer;
+    }
+
+    /* Layout */
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+        .grid { grid-template-columns: 1fr 1fr; }
+        .controls-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* Panels */
+    .panel {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .panel-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+    
+    .panel-subtitle {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        font-weight: normal;
+        margin-top: 0.25rem;
+    }
+
+    .panel-body {
+        padding: 1rem;
+        flex-grow: 1;
+        overflow-x: auto;
+    }
+
+    pre {
+        margin: 0;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        white-space: pre-wrap;
+    }
+
+    /* Syntax Highlighting */
+    .key { color: #f472b6; }
+    .string { color: #a7f3d0; }
+    .number { color: #fde047; }
+    .boolean { color: #93c5fd; }
+    .null { color: #cbd5e1; }
+
+    .light-theme .key { color: #db2777; }
+    .light-theme .string { color: #059669; }
+    .light-theme .number { color: #d97706; }
+    .light-theme .boolean { color: #2563eb; }
+    .light-theme .null { color: #475569; }
+
+    /* Simulator Panel */
+    .simulator {
+        margin-top: 2rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+        color: white;
+        transition: opacity 0.2s;
+        font-family: inherit;
+    }
+    .btn:hover { opacity: 0.9; }
+
+    .btn-200 { background: var(--success); }
+    .btn-400 { background: var(--warning); color: #000; }
+    .btn-503 { background: var(--danger); }
+
+    /* Log Card */
+    .log-card {
+        background: var(--bg);
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        transition: opacity 0.3s;
+    }
+
+    .log-steps {
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+        min-height: 20px;
+    }
+
+    .step {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        background: var(--border);
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+    th, td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--text-muted); font-weight: 500; }
+
+</style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Webhook Event Explorer</h1>
+        <button id="themeToggle" class="pill">Toggle Theme</button>
+    </header>
+
+    <div class="controls-grid">
+        <div>
+            <div style="margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">Event Type</div>
+            <div class="pill-group" id="eventTypePills">
+                <button class="pill active" data-type="PAYMENT_PUSH">PAYMENT_PUSH</button>
+                <button class="pill" data-type="BALANCE_INQUIRY">BALANCE_INQUIRY</button>
+                <button class="pill" data-type="VPA_VERIFICATION">VPA_VERIFICATION</button>
+            </div>
+        </div>
+        <div>
+            <div style="margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">Scenario</div>
+            <select class="dropdown" id="scenarioSelect"></select>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    Kafka Event Consumed
+                    <div class="panel-subtitle">Topic: psp.switch.completed.events</div>
+                </div>
+            </div>
+            <div class="panel-body">
+                <pre id="kafkaJson"></pre>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    Webhook POST to TPAP endpoint
+                    <div class="panel-subtitle" id="webhookUrl"></div>
+                </div>
+            </div>
+            <div class="panel-body">
+                <pre id="webhookJson"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="simulator">
+        <h2 style="font-size: 1.25rem; font-weight: 600;">Delivery Outcome Simulator</h2>
+        <div class="action-buttons">
+            <button class="btn btn-200" onclick="simulateResponse(200)">Simulate 200 OK</button>
+            <button class="btn btn-400" onclick="simulateResponse(400)">Simulate 400 Bad Request</button>
+            <button class="btn btn-503" onclick="simulateResponse(503)">Simulate 503 Unavailable</button>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <div class="panel-header">Resulting DeliveryLog</div>
+                <div class="panel-body">
+                    <div class="log-steps" id="logSteps"></div>
+                    <div class="log-card" id="deliveryLogObj" style="display: none;">
+                        <pre id="deliveryLogJson"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">Config States Reference</div>
+                <div class="panel-body" style="padding: 0;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>State</th>
+                                <th>Active Flag</th>
+                                <th>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Config found</td>
+                                <td><code>true</code></td>
+                                <td style="color: var(--success)">Dispatched</td>
+                            </tr>
+                            <tr>
+                                <td>Config found</td>
+                                <td><code>false</code></td>
+                                <td style="color: var(--warning)">SKIPPED</td>
+                            </tr>
+                            <tr>
+                                <td>Config not found</td>
+                                <td>—</td>
+                                <td style="color: var(--warning)">SKIPPED</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Data Definitions --- //
+    const baseFields = {
+        tpapId: "phonepe",
+        txnId: "phonepe-550e8400-e29b-41d4-a716-446655440000",
+        correlationId: "e993b3f2-1a42-4f16-8c11-9abcdf4f9981"
+    };
+
+    const datasets = {
+        PAYMENT_PUSH: {
+            scenarios: ["Success", "Failed — insufficient funds", "Pending"],
+            url: "https://api.phonepe.com/webhooks/psp/payment-push",
+            generateKafkaPayload: (scen) => ({
+                payerVpa: "priya.sharma@okhdfcbank",
+                payeeVpa: "merchant.swiggy@okicici",
+                amount: "349.00",
+                currency: "INR",
+                npciRrn: "512304219876",
+                txnStatus: scen === "Success" ? "SUCCESS" : (scen === "Pending" ? "PENDING" : "FAILED"),
+                failureReason: scen === "Failed — insufficient funds" ? "U69 - Insufficient Funds" : null
+            })
+        },
+        BALANCE_INQUIRY: {
+            scenarios: ["Success", "Failed inquiry"],
+            url: "https://api.phonepe.com/webhooks/psp/balance-inquiry",
+            generateKafkaPayload: (scen) => ({
+                vpa: "rahul.verma@okaxis",
+                availableBalance: scen === "Success" ? "12500.50" : null,
+                currency: "INR",
+                inquiryStatus: scen === "Success" ? "SUCCESS" : "FAILED"
+            })
+        },
+        VPA_VERIFICATION: {
+            scenarios: ["Verified", "Not found"],
+            url: "https://api.phonepe.com/webhooks/psp/vpa-verification",
+            generateKafkaPayload: (scen) => ({
+                vpa: scen === "Verified" ? "priya.sharma@okhdfcbank" : "unknown.user@ybl",
+                accountHolderName: scen === "Verified" ? "Priya Sharma" : null,
+                bankName: scen === "Verified" ? "HDFC Bank" : null,
+                verified: scen === "Verified",
+                failureReason: scen === "Not found" ? "VPA does not exist" : null
+            })
+        }
+    };
+
+    let currentEventId = "evt_883a3f";
+    let currentType = "PAYMENT_PUSH";
+    let currentScenario = "Success";
+
+    // --- Core Logic --- //
+
+    function syntaxHighlight(json) {
+        if (typeof json != 'string') {
+             json = JSON.stringify(json, undefined, 2);
+        }
+        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            var cls = 'number';
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) {
+                    cls = 'key';
+                } else {
+                    cls = 'string';
+                }
+            } else if (/true|false/.test(match)) {
+                cls = 'boolean';
+            } else if (/null/.test(match)) {
+                cls = 'null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+        });
+    }
+
+    function renderState() {
+        const set = datasets[currentType];
+        
+        // Update URL
+        document.getElementById("webhookUrl").innerText = set.url;
+
+        // Build base envelope wrapper representing what comes into Egress
+        const ts = new Date().toISOString();
+        const payloadData = set.generateKafkaPayload(currentScenario);
+
+        const kafkaEnvelope = {
+            eventId: currentEventId,
+            eventType: currentType,
+            tpapId: baseFields.tpapId,
+            txnId: baseFields.txnId,
+            correlationId: baseFields.correlationId,
+            timestamp: ts,
+            schemaVersion: "1.0",
+            payload: payloadData
+        };
+
+        const webhookPayload = {
+            eventId: currentEventId,
+            eventType: currentType,
+            tpapId: baseFields.tpapId,
+            txnId: baseFields.txnId,
+            correlationId: baseFields.correlationId,
+            deliveredAt: ts,
+            ...payloadData
+        };
+
+        document.getElementById("kafkaJson").innerHTML = syntaxHighlight(kafkaEnvelope);
+        document.getElementById("webhookJson").innerHTML = syntaxHighlight(webhookPayload);
+        
+        // Reset Simulator
+        document.getElementById("logSteps").innerHTML = "";
+        document.getElementById("deliveryLogObj").style.display = "none";
+    }
+
+    function onTypeChange(type) {
+        currentType = type;
+        currentEventId = "evt_" + Math.random().toString(16).slice(2, 8);
+        document.querySelectorAll(".pill").forEach(p => p.classList.toggle("active", p.dataset.type === type));
+        
+        const scenarios = datasets[type].scenarios;
+        const select = document.getElementById("scenarioSelect");
+        select.innerHTML = scenarios.map(s => `<option value="${s}">${s}</option>`).join("");
+        currentScenario = scenarios[0];
+        
+        renderState();
+    }
+
+    document.querySelectorAll(".pill").forEach(p => {
+        if(p.id !== 'themeToggle') {
+            p.addEventListener("click", (e) => onTypeChange(e.target.dataset.type))
+        }
+    });
+
+    document.getElementById("scenarioSelect").addEventListener("change", (e) => {
+        currentScenario = e.target.value;
+        renderState();
+    });
+
+    // Theme toggler
+    document.getElementById("themeToggle").addEventListener("click", () => {
+        document.body.classList.toggle("light-theme");
+    });
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    async function simulateResponse(code) {
+        const stepsContainer = document.getElementById("logSteps");
+        const logCard = document.getElementById("deliveryLogObj");
+        
+        stepsContainer.innerHTML = "";
+        logCard.style.display = "none";
+        
+        let attempt = 0;
+        let finalStatus = "SUCCESS";
+        let maxAttempts = code === 503 ? 4 : 1; // 1 initial + 3 retries for 503
+
+        for(let i=1; i<=maxAttempts; i++) {
+            attempt = i;
+            const span = document.createElement("span");
+            span.className = "step";
+            span.innerText = `Attempt ${i} → ${code}`;
+            stepsContainer.appendChild(span);
+            
+            if (code === 503) finalStatus = "FAILED";
+            if (code === 400) finalStatus = "FAILED";
+            
+            if(i < maxAttempts && code === 503) {
+                await sleep(600); // animate delay
+            }
+        }
+
+        if(code === 503) {
+            const span = document.createElement("span");
+            span.className = "step";
+            span.style.background = "var(--danger)";
+            span.style.color = "white";
+            span.innerText = `FAILED (Exhausted)`;
+            stepsContainer.appendChild(span);
+        }
+
+        const deliveryLog = {
+            id: Math.floor(Math.random() * 10000),
+            eventId: currentEventId,
+            txnId: baseFields.txnId,
+            tpapId: baseFields.tpapId,
+            eventType: currentType,
+            webhookUrl: datasets[currentType].url,
+            status: finalStatus,
+            httpStatus: code,
+            attemptNumber: attempt,
+            errorMessage: code === 200 ? null : (code === 400 ? "Bad Request payload" : "Connection Refused / Gateway Timeout"),
+            deliveredAt: new Date().toISOString()
+        };
+
+        const jsonPre = document.getElementById("deliveryLogJson");
+        jsonPre.innerHTML = syntaxHighlight(deliveryLog);
+        
+        logCard.style.display = "block";
+        
+        // Next time round, make a new event Id for realism
+        currentEventId = "evt_" + Math.random().toString(16).slice(2, 8);
+    }
+
+    // Initialize
+    onTypeChange("PAYMENT_PUSH");
+</script>
+</body>
+</html>

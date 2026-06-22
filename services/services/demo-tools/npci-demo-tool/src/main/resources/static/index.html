@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NPCI Demo Tool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glass-container">
+        <h1>NPCI Demo Tool</h1>
+        <p>Send test requests to the NPCI Simulator.</p>
+        <div class="form-group">
+            <label for="txnType">Transaction Type</label>
+            <select id="txnType">
+                <option value="ReqValAdd">ReqValAdd (VPA Discovery)</option>
+                <option value="ReqBalEnq">ReqBalEnq (Balance Inquiry)</option>
+                <option value="ReqPay">ReqPay (Payment)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="payload">Payload (JSON)</label>
+            <textarea id="payload" rows="5">{"test": "data"}</textarea>
+        </div>
+        <button id="sendBtn">Send Request</button>
+        <div id="responseArea" class="hidden">
+            <h3>Response</h3>
+            <pre id="responseContent"></pre>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
